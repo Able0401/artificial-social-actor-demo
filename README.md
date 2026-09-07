@@ -92,26 +92,18 @@ default `/` unless you serve from a sub-path. A copy of `index.html` is written 
 
 ### GitHub Pages
 
-This repository deploys itself with the workflow in
-`.github/workflows/deploy-pages.yml`: on every push to `main` it runs `npm ci`,
-builds with `VITE_BASE_PATH=/artificial-social-actor-demo/`, uploads `dist/` as
-the Pages artifact and deploys it to
-<https://able0401.github.io/artificial-social-actor-demo/>.
-
-To deploy a fork:
-
-1. In the workflow, change `VITE_BASE_PATH` to `/<your-repo-name>/`.
-2. In the repository settings, under **Pages**, set the source to
-   **GitHub Actions**.
-3. Push to `main`. The workflow builds and publishes the site.
-
-To build the same thing by hand:
+The live demo is served from the `gh-pages` branch of this repository
+(repository settings, **Pages**, source "Deploy from a branch", branch `gh-pages`,
+folder `/`). To publish a fork the same way:
 
 ```bash
 VITE_BASE_PATH=/<repo-name>/ npm run build
+npx gh-pages -d dist --dotfiles
 ```
 
-or put `VITE_BASE_PATH=/<repo-name>/` in a `.env` file (see `.env.example`).
+`--dotfiles` keeps the `.nojekyll` marker so Pages serves `dist/` as-is. You can
+also put `VITE_BASE_PATH=/<repo-name>/` in a `.env` file (see `.env.example`)
+instead of prefixing the build command.
 
 ## Project layout
 
