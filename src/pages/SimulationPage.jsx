@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import OpenAI from 'openai'
-import { Settings } from 'lucide-react'
+import { Settings, Target, Lightbulb, MessageSquare, Search, BookOpen, ChevronDown } from 'lucide-react'
 import { SettingsPanel } from '../components/SettingsPanel'
 import { getApiKey, getModel, hasApiKey, XAI_BASE_URL } from '../lib/settings'
 
@@ -611,14 +611,12 @@ ${opponentPrompt}
             <div className="strategy-descriptions">
               <div className="strategy-header" onClick={() => setIsStrategyCollapsed(!isStrategyCollapsed)}>
                 <h3>Strategy Guide</h3>
-                <span className={`collapse-icon ${isStrategyCollapsed ? 'collapsed' : ''}`}>
-                  ▼
-                </span>
+                <ChevronDown size={16} className={`collapse-icon ${isStrategyCollapsed ? 'collapsed' : ''}`} />
             </div>
             
               <div className="agent-descriptions">
                 <div className="description-item">
-                  <span className="desc-icon">🧍</span>
+                  <Target size={16} className="desc-icon" aria-hidden="true" />
                   <div className="desc-content">
                     <strong>입장 (Position)</strong>
                     <p>협상에서 내가 겉으로 드러내는 요구나 주장을 말합니다.</p>
@@ -628,7 +626,7 @@ ${opponentPrompt}
                   </div>
                 
                 <div className="description-item">
-                  <span className="desc-icon">💡</span>
+                  <Lightbulb size={16} className="desc-icon" aria-hidden="true" />
                   <div className="desc-content">
                     <strong>이해관계 (Interest)</strong>
                     <p>입장 뒤에 숨은 진짜 이유와 필요, 동기를 말합니다.</p>
@@ -638,7 +636,7 @@ ${opponentPrompt}
                 </div>
                 
                 <div className="description-item">
-                  <span className="desc-icon">🗣</span>
+                  <MessageSquare size={16} className="desc-icon" aria-hidden="true" />
                   <div className="desc-content">
                     <strong>Disclosure 전략 (정보 공개 전략)</strong>
                     <p>내가 가진 입장이나 이해관계를 상대에게 언제, 어떻게 공개할지에 대한 전략입니다.</p>
@@ -648,7 +646,7 @@ ${opponentPrompt}
                 </div>
                 
                 <div className="description-item">
-                  <span className="desc-icon">🔍</span>
+                  <Search size={16} className="desc-icon" aria-hidden="true" />
                   <div className="desc-content">
                     <strong>Inference 전략 (추론 전략)</strong>
                     <p>상대의 말이나 행동을 근거로 상대의 진짜 의도나 이해관계를 추론하는 방식입니다.</p>
@@ -660,7 +658,7 @@ ${opponentPrompt}
             </div>
           ) : (
             <div className="strategy-collapsed" onClick={() => setIsStrategyCollapsed(!isStrategyCollapsed)}>
-              <span className="collapsed-text">📖</span>
+              <BookOpen size={18} className="collapsed-text" aria-label="Strategy Guide" />
               </div>
             )}
 
@@ -736,7 +734,7 @@ ${opponentPrompt}
                     </div>
                     {conv.reasoning && conv.role === 'myASA' && (
                       <div className="message-reasoning">
-                        <span className="thinking-emoji">💭</span>
+                        <span className="thinking-emoji">Reasoning</span>
                         <span className="reasoning-text">{conv.reasoning}</span>
                       </div>
                     )}

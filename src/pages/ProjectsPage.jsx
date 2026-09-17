@@ -49,7 +49,10 @@ const ProjectsPage = () => {
     <div className="projects-container">
       <header className="projects-header">
         <div className="header-content">
-          <h1>프로젝트 <span className="label-en">Projects</span></h1>
+          <div>
+            <p className="app-name">Artificial Social Actor</p>
+            <h1>프로젝트 <span className="label-en">Projects</span></h1>
+          </div>
           <div className="header-user">
             <span>환영합니다, {currentUser}님</span>
             <SettingsButton />
@@ -120,6 +123,7 @@ const ProjectsPage = () => {
                 <div className="project-card-header">
                   <Folder size={24} />
                   <button
+                    aria-label="Delete project"
                     onClick={async (e) => {
                       e.stopPropagation()
                       if (confirm(`프로젝트 "${project.name}"을(를) 삭제하시겠습니까?`)) {

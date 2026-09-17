@@ -134,15 +134,10 @@ export const SettingsPanel = ({ open, onClose, onSaved }) => {
             />
           )}
 
-          <div className="settings-notice">
-            <strong>Privacy.</strong> The key is stored only in this browser&apos;s
-            localStorage (<code>asa.apiKey</code>) and is sent only to{' '}
-            <code>{XAI_BASE_URL}</code> when you run a negotiation. Projects and
-            conversations are stored locally too. Nothing is sent to any other server.
-            <br />
-            키는 이 브라우저의 localStorage에만 저장되고, 협상을 실행할 때{' '}
-            <code>{XAI_BASE_URL}</code>로만 전송됩니다. 다른 서버로는 아무것도 보내지 않습니다.
-          </div>
+          <p className="settings-notice">
+            Your key is saved in this browser&apos;s localStorage and sent only to{' '}
+            <code>api.x.ai</code>. / 키는 이 브라우저의 localStorage에 저장되고 xAI API로만 전송됩니다.
+          </p>
 
           {notice && <div className="error-message">{notice}</div>}
 

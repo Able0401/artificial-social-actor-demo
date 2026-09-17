@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
-import { User } from 'lucide-react'
 
 // Demo build: there is no account system. The "name" is a local nickname
 // that namespaces projects in this browser's localStorage.
@@ -32,15 +31,20 @@ const LoginPage = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <User size={48} className="login-icon" />
-          <h1>에이전트 협상 시뮬레이터</h1>
-          <p>로컬 닉네임을 입력하여 계속하세요 / Enter a local nickname to continue</p>
+          <p className="login-eyebrow">Research prototype demo</p>
+          <h1>Artificial Social Actor</h1>
+          <p>
+            협상 전략을 적어 두면 LLM 에이전트가 대신 협상합니다.
+            <br />
+            Describe your strategy and an LLM agent negotiates on your behalf.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
           <input
             type="text"
             placeholder="닉네임 / Nickname"
+            aria-label="Nickname"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="login-input"
