@@ -5,24 +5,32 @@ import OpenAI from 'openai'
 import { Settings, Target, Lightbulb, MessageSquare, Search, BookOpen, ChevronDown } from 'lucide-react'
 import { SettingsPanel } from '../components/SettingsPanel'
 import { getApiKey, getModel, hasApiKey, XAI_BASE_URL } from '../lib/settings'
+import { useLang, tr } from '../lib/i18n'
+
+// The model appends this marker to its last message when the talk is over.
+// Both markers are accepted whichever language is selected.
+const END_MARKER = { en: '[END]', ko: '대화끝' }
+const END_RE = /(대화끝|\[END\])$/
 
 const SimulationPage = () => {
   const { projectId } = useParams()
   const navigate = useNavigate()
   const { getProject, updateProject, currentUser } = useApp()
+  const { lang } = useLang()
+  const t = (en, ko) => tr(lang, { en, ko })
   const [project, setProject] = useState(null)
   const [situation, setSituation] = useState('')
-  
+
   // 내 정보 - 4개 전략적 필드
   const [myPosition, setMyPosition] = useState('')
   const [myInterest, setMyInterest] = useState('')
   const [myDisclosureStrategy, setMyDisclosureStrategy] = useState('')
   const [myInferenceStrategy, setMyInferenceStrategy] = useState('')
-  
+
   // 상대방 정보
   const [opponentType, setOpponentType] = useState('') // 'cunning' or 'desperate'
   const [isStrategyCollapsed, setIsStrategyCollapsed] = useState(false)
-  
+
   const [rounds, setRounds] = useState([])
   const [currentRound, setCurrentRound] = useState(1)
   const [isRunning, setIsRunning] = useState(false)
@@ -124,54 +132,102 @@ const SimulationPage = () => {
     if (!apiKey) {
       console.error('❌ API 키가 설정되지 않았습니다.')
       setApiKeyReady(false)
-      throw new Error('xAI API 키가 설정되지 않았습니다. 오른쪽 위 "API Key" 버튼에서 입력해주세요.')
+      throw new Error(t('No xAI API key set. Add it with the "API Key" button at the top right.', 'xAI API 키가 설정되지 않았습니다. 오른쪽 위 "API Key" 버튼에서 입력해주세요.'))
     }
 
-    const systemPrompt = `모든 응답은 한국어로 해주세요. 당신은 협상 대화에서 ${currentRole === 'myASA' ? '내 에이전트' : '상대방 에이전트'}의 역할을 맡고 있습니다.`
+    const isKo = lang === 'ko'
+    let systemPrompt
+    let userPrompt
 
-    // 대화 히스토리를 문자열로 변환
-    const historyText = conversationHistory.length > 0 
-      ? '\n\n현재까지의 대화:\n' + conversationHistory.map((conv, index) => 
-          `${index + 1}. ${conv.role === 'myASA' ? '내 에이전트' : '상대방'}: ${conv.message}`
-        ).join('\n')
-      : '\n\n이것이 첫 번째 발언입니다.'
+    if (isKo) {
+      systemPrompt = `모든 응답은 한국어로 해주세요. 당신은 협상 대화에서 ${currentRole === 'myASA' ? '내 에이전트' : '상대방 에이전트'}의 역할을 맡고 있습니다.`
 
-    // 역할별로 필요한 정보만 포함
-    let userPrompt = `상황: ${situation}
+      // 대화 히스토리를 문자열로 변환
+      const historyText = conversationHistory.length > 0 
+        ? '\n\n현재까지의 대화:\n' + conversationHistory.map((conv, index) => 
+            `${index + 1}. ${conv.role === 'myASA' ? '내 에이전트' : '상대방'}: ${conv.message}`
+          ).join('\n')
+        : '\n\n이것이 첫 번째 발언입니다.'
+
+      // 역할별로 필요한 정보만 포함
+      userPrompt = `상황: ${situation}
 
 ${historyText}
 
 `
 
-    if (currentRole === 'myASA') {
-      // 내 에이전트 차례
-      userPrompt += `내 에이전트 정보 (당신의 역할):
+      if (currentRole === 'myASA') {
+        // 내 에이전트 차례
+        userPrompt += `내 에이전트 정보 (당신의 역할):
 - 입장(Position): ${myPosition}
 - 이해관계(Interest): ${myInterest}
 - Disclosure Strategy: ${myDisclosureStrategy}
 - Inference Strategy: ${myInferenceStrategy}
 
 당신은 내 에이전트로서 위에 알맞게 다음 발언을 생성해주세요.`
-    } else {
-      // 상대방 에이전트 차례
-      const opponentPrompt = opponentType === 'cunning' 
-        ? '당신의 계획은 교활하고 간교합니다. '
-        : opponentType === 'desperate'
-        ? '당신은 절망적인 상황을 연출하며 애원하고 간청하는 전략을 사용합니다.'
-        : '상대방 에이전트로서 협상에 참여합니다.'
-      
-      userPrompt += `상대방 에이전트 정보 (당신의 역할):
+      } else {
+        // 상대방 에이전트 차례
+        const opponentPrompt = opponentType === 'cunning' 
+          ? '당신의 계획은 교활하고 간교합니다. '
+          : opponentType === 'desperate'
+          ? '당신은 절망적인 상황을 연출하며 애원하고 간청하는 전략을 사용합니다.'
+          : '상대방 에이전트로서 협상에 참여합니다.'
+        
+        userPrompt += `상대방 에이전트 정보 (당신의 역할):
 ${opponentPrompt}
 
 당신은 상대방 에이전트로서 위의 지시에 맞게 다음 발언을 생성해주세요.`
-    }
+      }
 
-    userPrompt += `
+      userPrompt += `
 
 응답에는 message(실제 발언)와 reasoning(그 발언을 한 기저에 깔린 생각을 문어체로)을 포함해주세요.
 
-대화가 자연스럽게 종료되었다고 판단되면 message 맨 끝에 정확히 " 대화끝"(앞에 공백 포함)을 붙이세요.
+대화가 자연스럽게 종료되었다고 판단되면 message 맨 끝에 정확히 " ${END_MARKER.ko}"(앞에 공백 포함)을 붙이세요.
 반드시 실제 발언 뒤에만 붙이고, reasoning에는 붙이지 마세요.`
+    } else {
+      systemPrompt = `Write every response in English. Both the "message" field and the "reasoning" field must be in English, even if the situation, the settings or earlier turns contain other languages. You are playing ${currentRole === 'myASA' ? 'my agent' : 'the opposing agent'} in a negotiation.`
+
+      const historyText = conversationHistory.length > 0
+        ? '\n\nConversation so far:\n' + conversationHistory.map((conv, index) =>
+            `${index + 1}. ${conv.role === 'myASA' ? 'My agent' : 'Opponent'}: ${conv.message}`
+          ).join('\n')
+        : '\n\nThis is the first message of the conversation.'
+
+      userPrompt = `Situation: ${situation}
+
+${historyText}
+
+`
+
+      if (currentRole === 'myASA') {
+        userPrompt += `My agent's settings (your role):
+- Position: ${myPosition}
+- Interest: ${myInterest}
+- Disclosure Strategy: ${myDisclosureStrategy}
+- Inference Strategy: ${myInferenceStrategy}
+
+As my agent, write the next message in line with the settings above.`
+      } else {
+        const opponentPrompt = opponentType === 'cunning'
+          ? 'Your plan is cunning and crafty.'
+          : opponentType === 'desperate'
+          ? 'Your strategy is to present yourself as being in a desperate situation, pleading and begging.'
+          : 'You take part in the negotiation as the opposing agent.'
+
+        userPrompt += `Opposing agent's settings (your role):
+${opponentPrompt}
+
+As the opposing agent, write the next message following the instructions above.`
+      }
+
+      userPrompt += `
+
+Your response must contain "message" (what you actually say) and "reasoning" (the underlying thinking behind that message, written in plain expository prose). Write both in English.
+
+If you judge that the conversation has naturally come to an end, append exactly " ${END_MARKER.en}" (with the leading space) to the very end of message.
+Append it only after the actual message, never in reasoning.`
+    }
 
     console.log('🔧 OpenAI 클라이언트 생성')
     // The key is sent only to XAI_BASE_URL (https://api.x.ai/v1).
@@ -187,7 +243,7 @@ ${opponentPrompt}
         try { abortControllerRef.current.abort() } catch { /* ignore */ }
       }
       if (cancelledRef.current) {
-        throw new Error('요청이 취소되었습니다.')
+        throw new Error(t('Request cancelled.', '요청이 취소되었습니다.'))
       }
       abortControllerRef.current = new AbortController()
       const signal = abortControllerRef.current.signal
@@ -211,11 +267,11 @@ ${opponentPrompt}
               properties: {
                 message: {
                   type: "string",
-                  description: "실제 발언 내용"
+                  description: isKo ? "실제 발언 내용" : "What the agent actually says, in English"
                 },
                 reasoning: {
                   type: "string", 
-                  description: "발언의 기저에 깔린 생각"
+                  description: isKo ? "발언의 기저에 깔린 생각" : "The thinking behind the message, in English"
                 }
               },
               required: ["message", "reasoning"],
@@ -242,12 +298,12 @@ ${opponentPrompt}
       }
 
     } catch (error) {
-      if (error.message?.includes('요청이 취소되었습니다.') || error.name === 'AbortError') {
+      if (error.message?.includes('요청이 취소되었습니다.') || error.message?.includes('Request cancelled.') || error.name === 'AbortError') {
         console.warn('⏹️ generateSingleTurn 중단됨')
         throw error
       }
       console.error('❌ 단일 턴 생성 오류:', error)
-      throw new Error(`단일 턴 생성 실패: ${error.message}`)
+      throw new Error(`${t('Failed to generate a turn', '단일 턴 생성 실패')}: ${error.message}`)
     }
   }
 
@@ -272,7 +328,7 @@ ${opponentPrompt}
         // 턴 정보 업데이트 (로딩 메시지용)
         setCurrentTurnInfo({
           turn: currentTurn + 1,
-          role: currentRole === 'myASA' ? '내 에이전트' : '상대방',
+          role: currentRole === 'myASA' ? t('My agent', '내 에이전트') : t('Opponent', '상대방'),
           total: maxTurns
         })
         
@@ -300,7 +356,7 @@ ${opponentPrompt}
 
           // 대화 종료 키워드 감지
           const messageText = (newMessage.message || '').trim()
-          const isConversationEnd = /대화끝$/.test(messageText)
+          const isConversationEnd = END_RE.test(messageText)
           if (isConversationEnd) {
             console.log('🏁 대화 종료 키워드 감지: 더 이상 호출하지 않습니다.')
           }
@@ -387,7 +443,7 @@ ${opponentPrompt}
     } catch (error) {
       console.error('❌ 인터랙티브 대화 오류:', error)
       if (!isCancelled && !cancelledRef.current) {
-        alert(`대화 생성 중 오류가 발생했습니다: ${error.message}`)
+        alert(`${t('Error while generating the dialogue', '대화 생성 중 오류가 발생했습니다')}: ${error.message}`)
       }
     } finally {
       setIsRunning(false)
@@ -428,19 +484,19 @@ ${opponentPrompt}
     })
     
     const requiredFields = [
-      { field: situation, name: '협상 상황' },
-      { field: myPosition, name: '내 입장(Position)' },
-      { field: myInterest, name: '내 이해관계(Interest)' },
-      { field: myDisclosureStrategy, name: '내 Disclosure Strategy' },
-      { field: myInferenceStrategy, name: '내 Inference Strategy' },
-      { field: opponentType, name: '상대방 에이전트 유형' }
+      { field: situation, name: t('Dealmaking Context', '협상 상황') },
+      { field: myPosition, name: t('Position', '내 입장(Position)') },
+      { field: myInterest, name: t('Interest', '내 이해관계(Interest)') },
+      { field: myDisclosureStrategy, name: t('Disclosure Strategy', '내 Disclosure Strategy') },
+      { field: myInferenceStrategy, name: t('Inference Strategy', '내 Inference Strategy') },
+      { field: opponentType, name: t('Opponent agent type', '상대방 에이전트 유형') }
     ]
     
     const emptyFields = requiredFields.filter(f => !f.field?.trim())
     
     if (emptyFields.length > 0) {
       console.log('❌ 필드 검증 실패 - 빈 필드:', emptyFields.map(f => f.name))
-      alert(`다음 필드를 입력해주세요: ${emptyFields.map(f => f.name).join(', ')}`)
+      alert(`${t('Please fill in', '다음 필드를 입력해주세요')}: ${emptyFields.map(f => f.name).join(', ')}`)
       return
     }
 
@@ -458,7 +514,7 @@ ${opponentPrompt}
       실행중: isRunning
     })
     
-    if (confirm(`Round ${currentRound}의 모든 대화를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+    if (confirm(lang === 'ko' ? `Round ${currentRound}의 모든 대화를 초기화하시겠습니까? 이 작업은 되돌릴 수 없습니다.` : `Clear all dialogue in Round ${currentRound}? This cannot be undone.`)) {
       console.log('✅ 사용자 초기화 확인')
       
       // 현재 라운드만 초기화
@@ -503,7 +559,7 @@ ${opponentPrompt}
   }
 
   if (!project) {
-    return <div>로딩 중...</div>
+    return <div>{t('Loading...', '로딩 중...')}</div>
   }
 
   return (
@@ -518,13 +574,13 @@ ${opponentPrompt}
           title={apiKeyReady ? 'API key set' : 'API key not set'}
         >
           <Settings size={18} />
-          <span>API Key{apiKeyReady ? '' : ' 필요 / needed'}</span>
+          <span>API Key{apiKeyReady ? '' : t(' needed', ' 필요 / needed')}</span>
         </button>
         <button 
           className="back-button" 
           onClick={() => {
             if (isRunning || isLoading) {
-              const ok = confirm('대화 생성이 진행 중입니다. 중단하고 프로젝트 목록으로 돌아가시겠습니까?')
+              const ok = confirm(t('A dialogue is being generated. Stop it and go back to the project list?', '대화 생성이 진행 중입니다. 중단하고 프로젝트 목록으로 돌아가시겠습니까?'))
               if (!ok) return
               try { abortControllerRef.current?.abort() } catch { /* ignore */ }
             }
@@ -535,7 +591,7 @@ ${opponentPrompt}
             navigate('/projects')
           }}
         >
-          ← 프로젝트로 돌아가기 / Back
+          {t('← Back to projects', '← 프로젝트로 돌아가기 / Back')}
         </button>
         </div>
       </div>
@@ -550,7 +606,7 @@ ${opponentPrompt}
         {/* 상단 협상 상황 */}
         <div className="situation-section">
           <div className="config-field">
-            <label>협상 상황 <span className="label-en">Dealmaking Context</span></label>
+            {lang === 'ko' ? <label>협상 상황 <span className="label-en">Dealmaking Context</span></label> : <label>Dealmaking Context</label>}
             <textarea
               className="config-textarea"
               value={situation}
@@ -614,47 +670,91 @@ ${opponentPrompt}
                 <ChevronDown size={16} className={`collapse-icon ${isStrategyCollapsed ? 'collapsed' : ''}`} />
             </div>
             
-              <div className="agent-descriptions">
-                <div className="description-item">
-                  <Target size={16} className="desc-icon" aria-hidden="true" />
-                  <div className="desc-content">
-                    <strong>입장 (Position)</strong>
-                    <p>협상에서 내가 겉으로 드러내는 요구나 주장을 말합니다.</p>
-                    <p>즉, 상대가 직접 듣는 "무엇을 원한다"는 표현이에요.</p>
-                    <p>예: "이 노트북은 45만 원에 팔고 싶어요."</p>
+              {lang === 'ko' ? (
+                <div className="agent-descriptions">
+                  <div className="description-item">
+                    <Target size={16} className="desc-icon" aria-hidden="true" />
+                    <div className="desc-content">
+                      <strong>입장 (Position)</strong>
+                      <p>협상에서 내가 겉으로 드러내는 요구나 주장을 말합니다.</p>
+                      <p>즉, 상대가 직접 듣는 "무엇을 원한다"는 표현이에요.</p>
+                      <p>예: "이 노트북은 45만 원에 팔고 싶어요."</p>
+                    </div>
+                    </div>
+                  
+                  <div className="description-item">
+                    <Lightbulb size={16} className="desc-icon" aria-hidden="true" />
+                    <div className="desc-content">
+                      <strong>이해관계 (Interest)</strong>
+                      <p>입장 뒤에 숨은 진짜 이유와 필요, 동기를 말합니다.</p>
+                      <p>즉, "왜 그렇게 주장하는가"에 대한 내면적 이유입니다.</p>
+                      <p>예: "급하게 팔아야 하지만 너무 싸게는 팔고 싶지 않아요."</p>
+                    </div>
                   </div>
+                  
+                  <div className="description-item">
+                    <MessageSquare size={16} className="desc-icon" aria-hidden="true" />
+                    <div className="desc-content">
+                      <strong>Disclosure 전략 (정보 공개 전략)</strong>
+                      <p>내가 가진 입장이나 이해관계를 상대에게 언제, 어떻게 공개할지에 대한 전략입니다.</p>
+                      <p>처음부터 다 밝히지 않고, 신뢰가 쌓인 뒤에 부분적으로 공유하는 식으로 조절할 수 있습니다.</p>
+                      <p>즉, "내 속마음을 언제, 얼마나 보여줄까?"에 대한 판단입니다.</p>
+                    </div>
                   </div>
-                
-                <div className="description-item">
-                  <Lightbulb size={16} className="desc-icon" aria-hidden="true" />
-                  <div className="desc-content">
-                    <strong>이해관계 (Interest)</strong>
-                    <p>입장 뒤에 숨은 진짜 이유와 필요, 동기를 말합니다.</p>
-                    <p>즉, "왜 그렇게 주장하는가"에 대한 내면적 이유입니다.</p>
-                    <p>예: "급하게 팔아야 하지만 너무 싸게는 팔고 싶지 않아요."</p>
+                  
+                  <div className="description-item">
+                    <Search size={16} className="desc-icon" aria-hidden="true" />
+                    <div className="desc-content">
+                      <strong>Inference 전략 (추론 전략)</strong>
+                      <p>상대의 말이나 행동을 근거로 상대의 진짜 의도나 이해관계를 추론하는 방식입니다.</p>
+                      <p>겉으로는 "가격을 깎자"고 하지만, 사실은 "예산이 부족하다"는 이유일 수 있죠.</p>
+                      <p>즉, "상대가 왜 그렇게 말하는지 읽어내는 능력"입니다.</p>
+                    </div>
                   </div>
                 </div>
-                
-                <div className="description-item">
-                  <MessageSquare size={16} className="desc-icon" aria-hidden="true" />
-                  <div className="desc-content">
-                    <strong>Disclosure 전략 (정보 공개 전략)</strong>
-                    <p>내가 가진 입장이나 이해관계를 상대에게 언제, 어떻게 공개할지에 대한 전략입니다.</p>
-                    <p>처음부터 다 밝히지 않고, 신뢰가 쌓인 뒤에 부분적으로 공유하는 식으로 조절할 수 있습니다.</p>
-                    <p>즉, "내 속마음을 언제, 얼마나 보여줄까?"에 대한 판단입니다.</p>
+              ) : (
+                <div className="agent-descriptions">
+                  <div className="description-item">
+                    <Target size={16} className="desc-icon" aria-hidden="true" />
+                    <div className="desc-content">
+                      <strong>Position</strong>
+                      <p>The demand or claim you state openly in the negotiation.</p>
+                      <p>It is the "what I want" that the other side actually hears.</p>
+                      <p>Example: "I'd like to sell this laptop for 450,000 won."</p>
+                    </div>
+                  </div>
+
+                  <div className="description-item">
+                    <Lightbulb size={16} className="desc-icon" aria-hidden="true" />
+                    <div className="desc-content">
+                      <strong>Interest</strong>
+                      <p>The real reasons, needs and motives behind your position.</p>
+                      <p>It answers "why am I asking for this?"</p>
+                      <p>Example: "I have to sell soon, but I don't want to sell too cheap."</p>
+                    </div>
+                  </div>
+
+                  <div className="description-item">
+                    <MessageSquare size={16} className="desc-icon" aria-hidden="true" />
+                    <div className="desc-content">
+                      <strong>Disclosure Strategy</strong>
+                      <p>When and how you reveal your position and interests to the other side.</p>
+                      <p>You can hold things back at first and share them bit by bit once there is some trust.</p>
+                      <p>It decides how much of your hand to show, and when.</p>
+                    </div>
+                  </div>
+
+                  <div className="description-item">
+                    <Search size={16} className="desc-icon" aria-hidden="true" />
+                    <div className="desc-content">
+                      <strong>Inference Strategy</strong>
+                      <p>How you work out the other side's real intentions and interests from what they say and do.</p>
+                      <p>A buyer who asks for a discount may really be short on budget.</p>
+                      <p>It is reading why the other side says what it says.</p>
+                    </div>
                   </div>
                 </div>
-                
-                <div className="description-item">
-                  <Search size={16} className="desc-icon" aria-hidden="true" />
-                  <div className="desc-content">
-                    <strong>Inference 전략 (추론 전략)</strong>
-                    <p>상대의 말이나 행동을 근거로 상대의 진짜 의도나 이해관계를 추론하는 방식입니다.</p>
-                    <p>겉으로는 "가격을 깎자"고 하지만, 사실은 "예산이 부족하다"는 이유일 수 있죠.</p>
-                    <p>즉, "상대가 왜 그렇게 말하는지 읽어내는 능력"입니다.</p>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
           ) : (
             <div className="strategy-collapsed" onClick={() => setIsStrategyCollapsed(!isStrategyCollapsed)}>
@@ -667,7 +767,7 @@ ${opponentPrompt}
             <h3>My Agent</h3>
 
             <div className="config-field">
-              <label>입장(Position)</label>
+              <label>{t('Position', '입장(Position)')}</label>
               <textarea
                 className="config-textarea large"
                 value={myPosition}
@@ -678,7 +778,7 @@ ${opponentPrompt}
             </div>
 
             <div className="config-field">
-              <label>이해관계(Interest)</label>
+              <label>{t('Interest', '이해관계(Interest)')}</label>
               <textarea
                 className="config-textarea large"
                 value={myInterest}
@@ -689,7 +789,7 @@ ${opponentPrompt}
             </div>
 
             <div className="config-field">
-              <label>공개 전략 <span className="label-en">Disclosure Strategy</span></label>
+              {lang === 'ko' ? <label>공개 전략 <span className="label-en">Disclosure Strategy</span></label> : <label>Disclosure Strategy</label>}
               <textarea
                 className="config-textarea large"
                 value={myDisclosureStrategy}
@@ -700,7 +800,7 @@ ${opponentPrompt}
             </div>
 
             <div className="config-field">
-              <label>추론 전략 <span className="label-en">Inference Strategy</span></label>
+              {lang === 'ko' ? <label>추론 전략 <span className="label-en">Inference Strategy</span></label> : <label>Inference Strategy</label>}
               <textarea
                 className="config-textarea large"
                 value={myInferenceStrategy}
@@ -722,9 +822,15 @@ ${opponentPrompt}
                 const currentConversations = getCurrentRoundConversations()
                 return currentConversations.length === 0 ? (
                   <div className="no-messages">
-                    Round {currentRound}: 아직 대화가 없습니다. 모든 설정을 입력하고 "대화 생성"을 클릭하세요.
-                    <br />
-                    No dialogue yet. Fill in every field and click "Run".
+                    {lang === 'ko' ? (
+                      <>
+                        Round {currentRound}: 아직 대화가 없습니다. 모든 설정을 입력하고 "대화 생성"을 클릭하세요.
+                        <br />
+                        No dialogue yet. Fill in every field and click "Run".
+                      </>
+                    ) : (
+                      <>Round {currentRound}: no dialogue yet. Fill in every field and click "Run".</>
+                    )}
                   </div>
                 ) : (
                   currentConversations.map((conv) => (
@@ -748,12 +854,16 @@ ${opponentPrompt}
             {!apiKeyReady && (
               <div className="api-key-prompt">
                 <span>
-                  xAI API 키가 없습니다. 키를 입력해야 대화를 생성할 수 있습니다.
-                  <br />
+                  {lang === 'ko' && (
+                    <>
+                      xAI API 키가 없습니다. 키를 입력해야 대화를 생성할 수 있습니다.
+                      <br />
+                    </>
+                  )}
                   No xAI API key set. Add your own key to run a negotiation (it stays in this browser).
                 </span>
                 <button type="button" onClick={() => setSettingsOpen(true)}>
-                  API Key 입력 / Add key
+                  {t('Add key', 'API Key 입력 / Add key')}
                 </button>
               </div>
             )}
@@ -762,7 +872,7 @@ ${opponentPrompt}
             {isLoading && (
               <div className="progress-area compact">
                 <div className="loading-message-compact">
-                  {currentTurnInfo.role} 응답 생성 중... ({currentTurnInfo.turn}/{currentTurnInfo.total})
+                  {currentTurnInfo.role} {t('is responding...', '응답 생성 중...')} ({currentTurnInfo.turn}/{currentTurnInfo.total})
                 </div>
                 <div className="progress-bar-compact">
                   <div className="progress-fill"></div>
@@ -776,7 +886,7 @@ ${opponentPrompt}
                 onClick={handleRun}
                 disabled={isRunning || isLoading}
               >
-                {isLoading ? '대화 생성 중...' : '대화 생성 / Run'}
+                {isLoading ? t('Generating...', '대화 생성 중...') : t('Run', '대화 생성 / Run')}
               </button>
 
               {(isRunning || isLoading) && (
@@ -785,7 +895,7 @@ ${opponentPrompt}
                   className="cancel-button"
                   onClick={handleCancel}
                 >
-                  중단 / Stop
+                  {t('Stop', '중단 / Stop')}
                 </button>
               )}
               
@@ -800,17 +910,17 @@ ${opponentPrompt}
                     className="save-button"
                     onClick={() => {
                       saveProjectState()
-                      alert('대화가 저장되었습니다!')
+                      alert(t('Dialogue saved.', '대화가 저장되었습니다!'))
                     }}
                 >
-                    저장 / Save
+                    {t('Save', '저장 / Save')}
                 </button>
                 <button
                     type="button"
                     className="reset-button"
                     onClick={handleReset}
                 >
-                    초기화 / Reset
+                    {t('Reset', '초기화 / Reset')}
                 </button>
                 </>
                 )
@@ -823,7 +933,7 @@ ${opponentPrompt}
             <h3>Opponent Agent</h3>
 
             <div className="config-field">
-              <label>상대 유형 <span className="label-en">Agent Type</span></label>
+              {lang === 'ko' ? <label>상대 유형 <span className="label-en">Agent Type</span></label> : <label>Agent Type</label>}
               <div className="opponent-type-buttons">
                 <button
                   className={`opponent-type-btn ${opponentType === 'cunning' ? 'active' : ''}`}
@@ -886,10 +996,10 @@ ${opponentPrompt}
               {opponentType && (
                 <div className="opponent-description">
                   {opponentType === 'cunning' && (
-                    <p><strong>Cunning:</strong> 당신의 계획은 교활하고 간교합니다.</p>
+                    <p><strong>Cunning:</strong> {t('Your plan is cunning and crafty.', '당신의 계획은 교활하고 간교합니다.')}</p>
                   )}
                   {opponentType === 'desperate' && (
-                    <p><strong>Desperate:</strong> 당신은 절망적인 상황을 연출하며 애원하고 간청합니다.</p>
+                    <p><strong>Desperate:</strong> {t('You act out a desperate situation, pleading and begging.', '당신은 절망적인 상황을 연출하며 애원하고 간청합니다.')}</p>
                   )}
             </div>
               )}

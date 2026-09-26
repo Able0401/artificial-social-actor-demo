@@ -67,12 +67,13 @@ You need an xAI API key to generate dialogue (see [Bring your own key](#bring-yo
 
 ## How it works
 
+0. **Pick a language.** The EN / KO switch at the bottom right sets the interface language and the language of the prompts sent to the model, so both the dialogue and the reasoning come back in that language. English is the default; KO reproduces the Korean prompts used in the study. The choice is kept in localStorage (`asa.lang`).
 1. **Enter a nickname.** There is no account and no password. The nickname only labels your projects inside this browser.
 2. **Create a project** and open it.
-3. **Write the dealmaking context** (협상 상황), the scenario both agents share.
+3. **Write the dealmaking context**, the scenario both agents share.
 4. **Fill in "My Agent"** with the four fields above. The Strategy Guide panel on the left explains each field with examples.
 5. **Pick the opponent type.** *Cunning* plays a sly, aggressive counterpart. *Desperate* pleads and dramatises hardship. The opponent agent sees only the shared context and its persona, never your fields.
-6. **Click "대화 생성 / Run".** The agents alternate, yours first, for up to 20 turns (10 each) or until one of them ends the conversation. Each turn is a separate model call and messages appear as they arrive. **Stop** aborts mid-run.
+6. **Click "Run".** The agents alternate, yours first, for up to 20 turns (10 each) or until one of them ends the conversation. Each turn is a separate model call and messages appear as they arrive. **Stop** aborts mid-run.
 7. **Read the reasoning.** A 💭 line under each of your agent's messages shows the reasoning the model gave for that turn. The opponent's reasoning is generated too but hidden, as it was in the study.
 8. **Try another round.** When a run finishes, the round is marked complete and a new round tab appears with the same settings and an empty dialogue, so you can change your strategy and run again. **Reset** clears the current round.
 
@@ -132,6 +133,7 @@ src/
   components/SettingsPanel.jsx  BYOK settings modal and gear button
   contexts/AppContext.jsx       nickname and project state (localStorage)
   lib/db.js                     localStorage replacement for the study database
+  lib/i18n.jsx                  EN/KO switch and string helper
   lib/settings.js               API key and model storage helpers
   pages/LoginPage.jsx           nickname entry
   pages/ProjectsPage.jsx        project list
@@ -171,6 +173,7 @@ ASA(Artificial Social Actor)는 협상을 AI 에이전트에게 맡기는 연구
 협상 상황을 적고 내 에이전트의 입장, 이해관계, 공개 전략, 추론 전략을 입력한 뒤 상대 유형(Cunning / Desperate)을 고르면 두 에이전트가 실시간으로 협상합니다. 내 에이전트의 발언 아래에는 그 턴에 모델이 내놓은 판단 근거가 함께 보입니다.
 
 - 실행: `npm install` 후 `npm run dev`.
+- 언어: 오른쪽 아래 EN / KO 스위치로 화면과 모델 프롬프트 언어를 함께 바꿉니다. 기본값은 영어이고, KO는 연구 때 쓴 한국어 프롬프트 그대로입니다.
 - 로그인: 비밀번호 없는 닉네임입니다. 이 브라우저 안에서 프로젝트를 구분하는 데만 쓰입니다.
 - API 키: <https://console.x.ai>에서 발급받아 앱 오른쪽 위 **API Key** 버튼에 붙여 넣습니다. 키는 이 브라우저의 localStorage(`asa.apiKey`)에만 저장되고 `https://api.x.ai/v1`로만 전송됩니다.
 - 모델, 온도, JSON 출력 형식은 연구 때와 같습니다 (`grok-4-0709`, 0.7).

@@ -981,3 +981,37 @@ button:disabled {
     max-width: 90%;
   }
 }
+
+/* Language switch (fixed, bottom right on every page) ------------------ */
+.lang-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 900;
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(28, 34, 48, 0.12);
+}
+
+.lang-toggle button {
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+}
+
+.lang-toggle button + button {
+  border-left: 1px solid var(--line);
+}
+
+.lang-toggle button.active {
+  background: var(--accent);
+  color: #fff;
+}

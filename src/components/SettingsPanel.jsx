@@ -9,6 +9,7 @@ import {
   setModel,
   hasApiKey
 } from '../lib/settings'
+import { useLang, tr } from '../lib/i18n'
 
 const CUSTOM = '__custom__'
 
@@ -21,6 +22,8 @@ export const SettingsPanel = ({ open, onClose, onSaved }) => {
   const [modelChoice, setModelChoice] = useState(DEFAULT_MODEL)
   const [customModel, setCustomModel] = useState('')
   const [notice, setNotice] = useState('')
+  const { lang } = useLang()
+  const t = (en, ko) => tr(lang, { en, ko })
 
   // Reload stored values every time the panel opens.
   useEffect(() => {
@@ -47,7 +50,7 @@ export const SettingsPanel = ({ open, onClose, onSaved }) => {
     e.preventDefault()
     const trimmed = apiKey.trim()
     if (!trimmed) {
-      setNotice('API 키를 입력해주세요. / Please paste an API key.')
+      setNotice(t('Please paste an API key.', 'API 키를 입력해주세요. / Please paste an API key.'))
       return
     }
     setApiKey(trimmed)
@@ -58,7 +61,7 @@ export const SettingsPanel = ({ open, onClose, onSaved }) => {
   }
 
   const handleClear = () => {
-    if (!confirm('저장된 API 키를 브라우저에서 삭제할까요?\nRemove the stored API key from this browser?')) return
+    if (!confirm(t('Remove the stored API key from this browser?', '저장된 API 키를 브라우저에서 삭제할까요?\nRemove the stored API key from this browser?'))) return
     setApiKey('')
     setModel(DEFAULT_MODEL)
     setApiKeyState('')
@@ -72,7 +75,7 @@ export const SettingsPanel = ({ open, onClose, onSaved }) => {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content settings-panel" onClick={(e) => e.stopPropagation()}>
         <div className="settings-panel-header">
-          <h2>설정 / Settings</h2>
+          <h2>{t('Settings', '설정 / Settings')}</h2>
           <button type="button" className="settings-close" onClick={onClose} aria-label="Close">
             <X size={18} />
           </button>
@@ -103,13 +106,23 @@ export const SettingsPanel = ({ open, onClose, onSaved }) => {
               {showKey ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
-          <p className="settings-help">
-            키는{' '}
-            <a href="https://console.x.ai" target="_blank" rel="noreferrer">
-              console.x.ai
-            </a>
-            에서 발급받을 수 있습니다. / Get a key at console.x.ai.
-          </p>
+          {lang === 'ko' ? (
+            <p className="settings-help">
+              키는{' '}
+              <a href="https://console.x.ai" target="_blank" rel="noreferrer">
+                console.x.ai
+              </a>
+              에서 발급받을 수 있습니다. / Get a key at console.x.ai.
+            </p>
+          ) : (
+            <p className="settings-help">
+              Get a key at{' '}
+              <a href="https://console.x.ai" target="_blank" rel="noreferrer">
+                console.x.ai
+              </a>
+              .
+            </p>
+          )}
 
           <label className="settings-label" htmlFor="asa-model">
             Model
@@ -136,7 +149,8 @@ export const SettingsPanel = ({ open, onClose, onSaved }) => {
 
           <p className="settings-notice">
             Your key is saved in this browser&apos;s localStorage and sent only to{' '}
-            <code>api.x.ai</code>. / 키는 이 브라우저의 localStorage에 저장되고 xAI API로만 전송됩니다.
+            <code>api.x.ai</code>.
+            {lang === 'ko' && ' / 키는 이 브라우저의 localStorage에 저장되고 xAI API로만 전송됩니다.'}
           </p>
 
           {notice && <div className="error-message">{notice}</div>}
@@ -144,14 +158,14 @@ export const SettingsPanel = ({ open, onClose, onSaved }) => {
           <div className="modal-actions">
             {hasApiKey() && (
               <button type="button" className="settings-clear" onClick={handleClear}>
-                키 삭제 / Clear key
+                {t('Clear key', '키 삭제 / Clear key')}
               </button>
             )}
             <button type="button" className="cancel-button" onClick={onClose}>
-              취소 / Cancel
+              {t('Cancel', '취소 / Cancel')}
             </button>
             <button type="submit" className="create-button">
-              저장 / Save
+              {t('Save', '저장 / Save')}
             </button>
           </div>
         </form>
@@ -164,6 +178,7 @@ export const SettingsPanel = ({ open, onClose, onSaved }) => {
 export const SettingsButton = ({ onSaved, className = '' }) => {
   const [open, setOpen] = useState(false)
   const [configured, setConfigured] = useState(hasApiKey())
+  const { lang } = useLang()
 
   const handleSaved = () => {
     setConfigured(hasApiKey())
@@ -179,7 +194,7 @@ export const SettingsButton = ({ onSaved, className = '' }) => {
         title={configured ? 'API key set' : 'API key not set'}
       >
         <Settings size={18} />
-        <span>API Key{configured ? '' : ' 필요 / needed'}</span>
+        <span>API Key{configured ? '' : tr(lang, { en: ' needed', ko: ' 필요 / needed' })}</span>
       </button>
       <SettingsPanel open={open} onClose={() => setOpen(false)} onSaved={handleSaved} />
     </>

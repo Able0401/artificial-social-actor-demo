@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
+import { useLang, tr } from '../lib/i18n'
 
 // Demo build: there is no account system. The "name" is a local nickname
 // that namespaces projects in this browser's localStorage.
@@ -9,11 +10,13 @@ const LoginPage = () => {
   const [error, setError] = useState('')
   const navigate = useNavigate()
   const { login, loading } = useApp()
+  const { lang } = useLang()
+  const t = (en, ko) => tr(lang, { en, ko })
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!username.trim()) {
-      setError('닉네임을 입력해주세요. / Please enter a nickname.')
+      setError(t('Please enter a nickname.', '닉네임을 입력해주세요. / Please enter a nickname.'))
       return
     }
 
@@ -23,7 +26,7 @@ const LoginPage = () => {
       navigate('/projects')
     } catch (error) {
       console.error('로그인 실패:', error)
-      setError(error.message || '로그인에 실패했습니다.')
+      setError(error.message || t('Could not sign in.', '로그인에 실패했습니다.'))
     }
   }
 
@@ -33,17 +36,21 @@ const LoginPage = () => {
         <div className="login-header">
           <p className="login-eyebrow">Research prototype demo</p>
           <h1>Artificial Social Actor</h1>
-          <p>
-            협상 전략을 적어 두면 LLM 에이전트가 대신 협상합니다.
-            <br />
-            Describe your strategy and an LLM agent negotiates on your behalf.
-          </p>
+          {lang === 'ko' ? (
+            <p>
+              협상 전략을 적어 두면 LLM 에이전트가 대신 협상합니다.
+              <br />
+              Describe your strategy and an LLM agent negotiates on your behalf.
+            </p>
+          ) : (
+            <p>Describe your strategy and an LLM agent negotiates on your behalf.</p>
+          )}
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
           <input
             type="text"
-            placeholder="닉네임 / Nickname"
+            placeholder={t('Nickname', '닉네임 / Nickname')}
             aria-label="Nickname"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -58,17 +65,24 @@ const LoginPage = () => {
             </div>
           )}
           <button type="submit" className="login-button" disabled={loading}>
-            {loading ? '입장 중...' : '입장 / Enter'}
+            {loading ? t('Entering...', '입장 중...') : t('Enter', '입장 / Enter')}
           </button>
         </form>
 
-        <p className="login-note">
-          비밀번호는 없습니다. 닉네임은 이 브라우저 안에서 프로젝트를 구분하는 용도로만 쓰이며,
-          모든 데이터는 localStorage에 저장됩니다.
-          <br />
-          No password, no account. The nickname only labels your projects in this
-          browser; everything is stored in localStorage.
-        </p>
+        {lang === 'ko' ? (
+          <p className="login-note">
+            비밀번호는 없습니다. 닉네임은 이 브라우저 안에서 프로젝트를 구분하는 용도로만 쓰이며,
+            모든 데이터는 localStorage에 저장됩니다.
+            <br />
+            No password, no account. The nickname only labels your projects in this
+            browser; everything is stored in localStorage.
+          </p>
+        ) : (
+          <p className="login-note">
+            No password, no account. The nickname only labels your projects in this
+            browser; everything is stored in localStorage.
+          </p>
+        )}
       </div>
     </div>
   )
