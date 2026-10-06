@@ -68,14 +68,13 @@ No sign-up or API key is needed. The demo allows a fixed number of model calls p
 ## How it works
 
 0. **Pick a language.** The EN / KO switch at the bottom right sets the interface language and the language of the prompts sent to the model, so both the dialogue and the reasoning come back in that language. English is the default; KO reproduces the Korean prompts used in the study. The choice is kept in localStorage (`asa.lang`).
-1. **Enter a nickname.** There is no account and no password. The nickname only labels your projects inside this browser.
-2. **Create a project** and open it.
-3. **Write the dealmaking context**, the scenario both agents share.
-4. **Fill in "My Agent"** with the four fields above. The Strategy Guide panel on the left explains each field with examples.
-5. **Pick the opponent type.** *Cunning* plays a sly, aggressive counterpart. *Desperate* pleads and dramatises hardship. The opponent agent sees only the shared context and its persona, never your fields.
-6. **Click "Run".** The agents alternate, yours first, for up to 20 turns (10 each) or until one of them ends the conversation. Each turn is a separate model call and messages appear as they arrive. **Stop** aborts mid-run.
-7. **Read the reasoning.** A 💭 line under each of your agent's messages shows the reasoning the model gave for that turn. The opponent's reasoning is generated too but hidden, as it was in the study.
-8. **Try another round.** When a run finishes, the round is marked complete and a new round tab appears with the same settings and an empty dialogue, so you can change your strategy and run again. **Reset** clears the current round.
+1. **Start on the example.** The page opens on a filled-in scenario (selling a used laptop) with a short guide above it. There is no sign-up. **Load example** refills it; **Clear fields** empties every field.
+2. **Write the dealmaking context**, the scenario both agents share.
+3. **Fill in "My Agent"** with the four fields above. The Strategy Guide panel on the left explains each field with examples.
+4. **Pick the opponent type.** *Cunning* plays a sly, aggressive counterpart. *Desperate* pleads and dramatises hardship. The opponent agent sees only the shared context and its persona, never your fields.
+5. **Click "Run".** The agents alternate, yours first, for up to 20 turns (10 each) or until one of them ends the conversation. Each turn is a separate model call and messages appear as they arrive. **Stop** aborts mid-run.
+6. **Read the reasoning.** A 💭 line under each of your agent's messages shows the reasoning the model gave for that turn. The opponent's reasoning is generated too but hidden, as it was in the study.
+7. **Try another round.** When a run finishes, the round is marked complete and a new round tab appears with the same settings and an empty dialogue, so you can change your strategy and run again. **Reset** clears the current round.
 
 | Setting | Value (same as the study) |
 |---|---|
@@ -126,13 +125,12 @@ npx gh-pages -d dist --dotfiles
 
 ```
 src/
-  contexts/AppContext.jsx       nickname and project state (localStorage)
+  contexts/AppContext.jsx       guest profile and project state (localStorage)
   lib/db.js                     localStorage replacement for the study database
   lib/i18n.jsx                  EN/KO switch and string helper
   lib/settings.js               proxy endpoint
-  pages/LoginPage.jsx           nickname entry
-  pages/ProjectsPage.jsx        project list
-  pages/SimulationPage.jsx      negotiation interface, prompts and model calls
+  pages/StartPage.jsx           landing: guest profile and the example project
+  pages/SimulationPage.jsx      negotiation interface, guide, prompts and model calls
 ```
 
 ## Citation
@@ -169,7 +167,7 @@ ASA(Artificial Social Actor)는 협상을 AI 에이전트에게 맡기는 연구
 
 - 실행: `npm install` 후 `npm run dev`.
 - 언어: 오른쪽 아래 EN / KO 스위치로 화면과 모델 프롬프트 언어를 함께 바꿉니다. 기본값은 영어이고, KO는 연구 때 쓴 한국어 프롬프트 그대로입니다.
-- 로그인: 비밀번호 없는 닉네임입니다. 이 브라우저 안에서 프로젝트를 구분하는 데만 쓰입니다.
+- 시작: 가입 없이 중고 노트북 판매 예시가 채워진 화면으로 바로 열립니다. 위쪽 가이드가 각 칸을 설명합니다.
 - API 키: 필요 없습니다. 모델 호출은 데모용 xAI 키를 가진 Firebase 함수(`functions/index.js`)를 거칩니다. 방문자마다 하루 호출 수가 정해져 있고, 협상 한 번은 20회입니다.
 - 모델, 온도, JSON 출력 형식은 연구 때와 같습니다 (`grok-4-0709`, 0.7).
-- 닉네임, 프로젝트, 대화는 브라우저에만 저장됩니다. 프록시는 대화를 저장하지 않습니다.
+- 설정과 대화는 브라우저에만 저장됩니다. 프록시는 대화를 저장하지 않습니다.

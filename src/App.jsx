@@ -1,8 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AppProvider } from './contexts/AppContext'
 import { LangProvider, LangToggle } from './lib/i18n'
-import LoginPage from './pages/LoginPage'
-import ProjectsPage from './pages/ProjectsPage'
 import SimulationPage from './pages/SimulationPage'
 import StartPage from './pages/StartPage'
 import './App.css'
@@ -18,8 +16,6 @@ function App() {
         <Router basename={basename}>
           <Routes>
             <Route path="/" element={<StartPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/simulation/:projectId" element={<SimulationPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
