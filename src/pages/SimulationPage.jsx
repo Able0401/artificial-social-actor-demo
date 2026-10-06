@@ -590,6 +590,24 @@ Append it only after the actual message, never in reasoning.`
               {t('Change one instruction, open the next round and run again to compare.', '지시 하나를 바꾸고 다음 라운드에서 다시 실행해 결과를 비교합니다.')}
             </li>
           </ol>
+          <div className="demo-guide-research">
+            <h2>{t('About the research', '어떤 연구인가요')}</h2>
+            <p>
+              {t(
+                'LLMs can now hold a strategic conversation well enough that handing one a negotiation is a real option, but little is known about how people want to hand it over. This prototype comes from a master\'s thesis that asks how a user should steer two things: how the agent reads the other side (inference) and how much of the user\'s own situation it reveals (disclosure).',
+                'LLM이 전략적인 대화를 해낼 만큼 좋아지면서 협상을 AI에게 맡기는 일이 현실적인 선택지가 되었지만, 사람들이 그것을 어떻게 맡기고 싶어 하는지는 잘 알려져 있지 않습니다. 이 프로토타입은 사용자가 두 가지를 어떻게 조정해야 하는지 묻는 석사논문에서 나왔습니다. 에이전트가 상대를 읽는 방식(추론)과 내 사정을 얼마나 밝히는지(정보 공개)입니다.'
+              )}
+            </p>
+            <p>
+              {t(
+                'Position and interest come from principled negotiation (Fisher and Ury, Getting to Yes); disclosure and inference strategy are what the thesis studies. In the user study, 12 participants set up an agent for three negotiations they would like to hand off, ran it, revised their settings, ran it again and were interviewed. This page is the same interface with the same prompts and model (grok-4-0709).',
+                '입장과 이해관계는 원칙 협상(Fisher와 Ury, Getting to Yes)에서 가져왔고, 공개 전략과 추론 전략이 이 논문이 다루는 부분입니다. 사용자 연구에서 참가자 12명이 맡기고 싶은 협상 세 가지에 에이전트를 설정해 실행하고, 설정을 고쳐 다시 실행한 뒤 인터뷰했습니다. 이 페이지는 연구 때와 같은 인터페이스, 프롬프트, 모델(grok-4-0709)입니다.'
+              )}
+            </p>
+            <p className="demo-guide-cite">
+              Hyun Seung Moon. <em>When I Need a Stand-in: Building Artificial Social Actors for Negotiation with User-Guided Inference and Disclosure.</em> {t('Master\'s thesis, Department of Industrial Design, KAIST, 2025. Advisor: Tak Yeon Lee.', 'KAIST 산업디자인학과 석사논문, 2025. 지도교수 이탁연.')}
+            </p>
+          </div>
         </section>
       )}
 
@@ -973,7 +991,7 @@ Append it only after the actual message, never in reasoning.`
               {opponentType && (
                 <div className="opponent-description">
                   {opponentType === 'cunning' && (
-                    <p><strong>Cunning</strong> · {t('The opponent is told: "Your plan is cunning and crafty." Expect it to hide its limits and push hard.', '상대가 받는 지시: "당신의 계획은 교활하고 간교합니다." 자기 한계를 숨기고 세게 밀어붙입니다.')}</p>
+                    <p><strong>Cunning</strong> · {t('The opponent is told: "Your plan is cunning and crafty."', '상대가 받는 지시: "당신의 계획은 교활하고 간교합니다."')}</p>
                   )}
                   {opponentType === 'desperate' && (
                     <p><strong>Desperate</strong> · {t('The opponent is told to present itself as being in a desperate situation, pleading and begging.', '상대가 받는 지시: 절박한 상황을 연출하며 애원하고 간청합니다.')}</p>
