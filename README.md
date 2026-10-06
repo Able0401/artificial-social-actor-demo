@@ -68,7 +68,7 @@ No sign-up or API key is needed. The demo allows a fixed number of model calls p
 ## How it works
 
 0. **Pick a language.** The EN / KO switch at the bottom right sets the interface language and the language of the prompts sent to the model, so both the dialogue and the reasoning come back in that language. English is the default; KO reproduces the Korean prompts used in the study. The choice is kept in localStorage (`asa.lang`).
-1. **Start on the example.** The page opens on a filled-in scenario (selling a used laptop) with a short guide above it. There is no sign-up. **Load example** refills it; **Clear fields** empties every field.
+1. **Start on the example.** The landing page describes the research; **Try the demo** opens a filled-in scenario (selling a used laptop). There is no sign-up. **Load example** refills it; **Clear fields** empties every field.
 2. **Write the dealmaking context**, the scenario both agents share.
 3. **Fill in "My Agent"** with the four fields above. The Strategy Guide panel on the left explains each field with examples.
 4. **Pick the opponent type.** *Cunning* plays a sly, aggressive counterpart. *Desperate* pleads and dramatises hardship. The opponent agent sees only the shared context and its persona, never your fields.
@@ -129,7 +129,8 @@ src/
   lib/db.js                     localStorage replacement for the study database
   lib/i18n.jsx                  EN/KO switch and string helper
   lib/settings.js               proxy endpoint
-  pages/StartPage.jsx           landing: guest profile and the example project
+  pages/HomePage.jsx            landing: the thesis, a figure and the way into the demo
+  pages/StartPage.jsx           /demo: guest profile and the example project
   pages/SimulationPage.jsx      negotiation interface, guide, prompts and model calls
 ```
 

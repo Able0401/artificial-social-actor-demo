@@ -1,8 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AppProvider } from './contexts/AppContext'
-import { LangProvider, LangToggle } from './lib/i18n'
+import { LangProvider } from './lib/i18n'
 import SimulationPage from './pages/SimulationPage'
 import StartPage from './pages/StartPage'
+import HomePage from './pages/HomePage'
 import './App.css'
 
 // BASE_URL comes from vite.config.js (VITE_BASE_PATH), so the router
@@ -15,12 +16,12 @@ function App() {
       <AppProvider>
         <Router basename={basename}>
           <Routes>
-            <Route path="/" element={<StartPage />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/demo" element={<StartPage />} />
             <Route path="/simulation/:projectId" element={<SimulationPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
-        <LangToggle />
       </AppProvider>
     </LangProvider>
   )

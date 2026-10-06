@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Target, Lightbulb, MessageSquare, Search, BookOpen, ChevronDown } from 'lucide-react'
 import { TURN_ENDPOINT } from '../lib/settings'
 import { exampleFields } from '../lib/example'
-import { useLang, tr } from '../lib/i18n'
+import { LangToggle, useLang, tr } from '../lib/i18n'
 
 // The model appends this marker to its last message when the talk is over.
 // Both markers are accepted whichever language is selected.
@@ -29,15 +29,6 @@ const SimulationPage = () => {
   // 상대방 정보
   const [opponentType, setOpponentType] = useState('') // 'cunning' or 'desperate'
   const [isStrategyCollapsed, setIsStrategyCollapsed] = useState(false)
-  const [guideOpen, setGuideOpen] = useState(() => {
-    try { return localStorage.getItem('asa.guideHidden') !== '1' } catch { return true }
-  })
-  const toggleGuide = () => {
-    setGuideOpen((open) => {
-      try { localStorage.setItem('asa.guideHidden', open ? '1' : '0') } catch { /* ignore */ }
-      return !open
-    })
-  }
 
   const [rounds, setRounds] = useState([])
   const [currentRound, setCurrentRound] = useState(1)
@@ -542,74 +533,19 @@ Append it only after the actual message, never in reasoning.`
 
   return (
     <div className="simulation-page">
-      <div className="simulation-header">
-        <div className="simulation-title">
-          <h1>Artificial Social Actor</h1>
-          <p>{t('Delegate a negotiation to an AI agent and read its reasoning turn by turn.', '협상을 AI 에이전트에게 맡기고, 매 턴 에이전트의 판단 근거를 읽어봅니다.')}</p>
-        </div>
-        <div className="simulation-header-actions">
-          <button type="button" className="back-button" onClick={toggleGuide}>
-            {guideOpen ? t('Hide guide', '가이드 숨기기') : t('Show guide', '가이드 보기')}
-          </button>
-          <button type="button" className="back-button" onClick={loadExample} disabled={isRunning || isLoading}>
+      <header className="sim-bar">
+        <Link className="sim-back" to="/">← {t('Back', '돌아가기')}</Link>
+        <span className="sim-bar-title">{t('Negotiation demo', '협상 데모')}</span>
+        <div className="sim-bar-actions">
+          <button type="button" className="sim-link" onClick={loadExample} disabled={isRunning || isLoading}>
             {t('Load example', '예시 불러오기')}
           </button>
-          <button type="button" className="back-button" onClick={clearFields} disabled={isRunning || isLoading}>
-            {t('Clear fields', '모두 비우기')}
+          <button type="button" className="sim-link" onClick={clearFields} disabled={isRunning || isLoading}>
+            {t('Clear', '비우기')}
           </button>
+          <LangToggle inline />
         </div>
-      </div>
-
-      {guideOpen && (
-        <section className="demo-guide" aria-label={t('How to use this demo', '사용 방법')}>
-          <p className="demo-guide-lead">
-            {t(
-              'You tell an AI agent how to negotiate for you. It then negotiates against another AI agent, and under each of its messages you can read why it said that. An example is already filled in: your agent is selling a used laptop.',
-              '내 AI 에이전트에게 협상 방법을 알려주면, 에이전트가 상대 AI 에이전트와 대신 협상합니다. 내 에이전트의 발언마다 그렇게 말한 이유가 함께 보입니다. 지금은 중고 노트북을 파는 예시가 채워져 있습니다.'
-            )}
-          </p>
-          <ol className="demo-guide-steps">
-            <li>
-              <strong>{t('Top · Dealmaking Context', '위 · 협상 상황')}</strong>
-              {t('The situation. Both agents read it.', '협상 상황입니다. 두 에이전트가 모두 읽습니다.')}
-            </li>
-            <li>
-              <strong>{t('Left · My Agent', '왼쪽 · 내 에이전트')}</strong>
-              {t('Four instructions only your agent sees. The Strategy Guide beside them explains each one.', '내 에이전트만 보는 지시 네 가지입니다. 옆의 Strategy Guide에 각 칸의 뜻이 있습니다.')}
-            </li>
-            <li>
-              <strong>{t('Right · Opponent Agent', '오른쪽 · 상대 에이전트')}</strong>
-              {t('How the other side behaves: Cunning or Desperate.', '상대가 어떻게 행동할지 고릅니다. Cunning 또는 Desperate.')}
-            </li>
-            <li>
-              <strong>{t('Center · Run', '가운데 · Run')}</strong>
-              {t('The agents take up to 20 turns, about 2 to 3 minutes. Check the Reasoning under your agent\'s messages against your instructions.', '두 에이전트가 최대 20턴 대화합니다. 2~3분 걸립니다. 내 에이전트 발언 아래 Reasoning이 내 지시대로인지 확인해보세요.')}
-            </li>
-            <li>
-              <strong>{t('Then · Round 2', '그다음 · Round 2')}</strong>
-              {t('Change one instruction, open the next round and run again to compare.', '지시 하나를 바꾸고 다음 라운드에서 다시 실행해 결과를 비교합니다.')}
-            </li>
-          </ol>
-          <div className="demo-guide-research">
-            <h2>{t('About the research', '어떤 연구인가요')}</h2>
-            <p>
-              {t(
-                'LLMs can now hold a strategic conversation well enough that handing one a negotiation is a real option, but little is known about how people want to hand it over. This prototype comes from a master\'s thesis that asks how a user should steer two things: how the agent reads the other side (inference) and how much of the user\'s own situation it reveals (disclosure).',
-                'LLM이 전략적인 대화를 해낼 만큼 좋아지면서 협상을 AI에게 맡기는 일이 현실적인 선택지가 되었지만, 사람들이 그것을 어떻게 맡기고 싶어 하는지는 잘 알려져 있지 않습니다. 이 프로토타입은 사용자가 두 가지를 어떻게 조정해야 하는지 묻는 석사논문에서 나왔습니다. 에이전트가 상대를 읽는 방식(추론)과 내 사정을 얼마나 밝히는지(정보 공개)입니다.'
-              )}
-            </p>
-            <p>
-              {t(
-                'Position and interest come from principled negotiation (Fisher and Ury, Getting to Yes); disclosure and inference strategy are what the thesis studies. In the user study, 12 participants set up an agent for three negotiations they would like to hand off, ran it, revised their settings, ran it again and were interviewed. This page is the same interface with the same prompts and model (grok-4-0709).',
-                '입장과 이해관계는 원칙 협상(Fisher와 Ury, Getting to Yes)에서 가져왔고, 공개 전략과 추론 전략이 이 논문이 다루는 부분입니다. 사용자 연구에서 참가자 12명이 맡기고 싶은 협상 세 가지에 에이전트를 설정해 실행하고, 설정을 고쳐 다시 실행한 뒤 인터뷰했습니다. 이 페이지는 연구 때와 같은 인터페이스, 프롬프트, 모델(grok-4-0709)입니다.'
-              )}
-            </p>
-            <p className="demo-guide-cite">
-              Hyun Seung Moon. <em>When I Need a Stand-in: Building Artificial Social Actors for Negotiation with User-Guided Inference and Disclosure.</em> {t('Master\'s thesis, Department of Industrial Design, KAIST, 2025. Advisor: Tak Yeon Lee.', 'KAIST 산업디자인학과 석사논문, 2025. 지도교수 이탁연.')}
-            </p>
-          </div>
-        </section>
-      )}
+      </header>
 
       <div className="simulation-content">
         {/* 상단 협상 상황 */}
@@ -624,7 +560,7 @@ Append it only after the actual message, never in reasoning.`
               placeholder={t('What is being negotiated, who is on which side, and the facts both sides know.', '무엇을 두고 협상하는지, 누가 어느 쪽인지, 양쪽이 아는 사실을 적습니다.')}
               disabled={isRunning}
             />
-            <p className="field-hint">{t('Both agents read this. Say what is being negotiated, which side your agent is on, and the facts both sides know, such as prices.', '두 에이전트가 모두 읽습니다. 무엇을 협상하는지, 내 에이전트가 어느 쪽인지, 가격처럼 양쪽이 아는 사실을 적어주세요.')}</p>
+            <p className="field-hint">{t('Both agents read this. Say which side your agent is on.', '두 에이전트가 모두 읽습니다. 내 에이전트가 어느 쪽인지 적어주세요.')}</p>
           </div>
           
         </div>
@@ -687,8 +623,6 @@ Append it only after the actual message, never in reasoning.`
                     <div className="desc-content">
                       <strong>입장 (Position)</strong>
                       <p>협상에서 내가 겉으로 드러내는 요구나 주장을 말합니다.</p>
-                      <p>즉, 상대가 직접 듣는 "무엇을 원한다"는 표현이에요.</p>
-                      <p>예: "이 노트북은 45만 원에 팔고 싶어요."</p>
                     </div>
                     </div>
                   
@@ -697,8 +631,6 @@ Append it only after the actual message, never in reasoning.`
                     <div className="desc-content">
                       <strong>이해관계 (Interest)</strong>
                       <p>입장 뒤에 숨은 진짜 이유와 필요, 동기를 말합니다.</p>
-                      <p>즉, "왜 그렇게 주장하는가"에 대한 내면적 이유입니다.</p>
-                      <p>예: "급하게 팔아야 하지만 너무 싸게는 팔고 싶지 않아요."</p>
                     </div>
                   </div>
                   
@@ -707,8 +639,6 @@ Append it only after the actual message, never in reasoning.`
                     <div className="desc-content">
                       <strong>Disclosure 전략 (정보 공개 전략)</strong>
                       <p>내가 가진 입장이나 이해관계를 상대에게 언제, 어떻게 공개할지에 대한 전략입니다.</p>
-                      <p>처음부터 다 밝히지 않고, 신뢰가 쌓인 뒤에 부분적으로 공유하는 식으로 조절할 수 있습니다.</p>
-                      <p>즉, "내 속마음을 언제, 얼마나 보여줄까?"에 대한 판단입니다.</p>
                     </div>
                   </div>
                   
@@ -717,8 +647,6 @@ Append it only after the actual message, never in reasoning.`
                     <div className="desc-content">
                       <strong>Inference 전략 (추론 전략)</strong>
                       <p>상대의 말이나 행동을 근거로 상대의 진짜 의도나 이해관계를 추론하는 방식입니다.</p>
-                      <p>겉으로는 "가격을 깎자"고 하지만, 사실은 "예산이 부족하다"는 이유일 수 있죠.</p>
-                      <p>즉, "상대가 왜 그렇게 말하는지 읽어내는 능력"입니다.</p>
                     </div>
                   </div>
                 </div>
@@ -729,8 +657,6 @@ Append it only after the actual message, never in reasoning.`
                     <div className="desc-content">
                       <strong>Position</strong>
                       <p>The demand or claim you state openly in the negotiation.</p>
-                      <p>It is the "what I want" that the other side actually hears.</p>
-                      <p>Example: "I'd like to sell this laptop for 720 dollars."</p>
                     </div>
                   </div>
 
@@ -739,8 +665,6 @@ Append it only after the actual message, never in reasoning.`
                     <div className="desc-content">
                       <strong>Interest</strong>
                       <p>The real reasons, needs and motives behind your position.</p>
-                      <p>It answers "why am I asking for this?"</p>
-                      <p>Example: "I have to sell soon, but I don't want to sell too cheap."</p>
                     </div>
                   </div>
 
@@ -749,8 +673,6 @@ Append it only after the actual message, never in reasoning.`
                     <div className="desc-content">
                       <strong>Disclosure Strategy</strong>
                       <p>When and how you reveal your position and interests to the other side.</p>
-                      <p>You can hold things back at first and share them bit by bit once there is some trust.</p>
-                      <p>It decides how much of your hand to show, and when.</p>
                     </div>
                   </div>
 
@@ -759,8 +681,6 @@ Append it only after the actual message, never in reasoning.`
                     <div className="desc-content">
                       <strong>Inference Strategy</strong>
                       <p>How you work out the other side's real intentions and interests from what they say and do.</p>
-                      <p>A buyer who asks for a discount may really be short on budget.</p>
-                      <p>It is reading why the other side says what it says.</p>
                     </div>
                   </div>
                 </div>
@@ -786,7 +706,6 @@ Append it only after the actual message, never in reasoning.`
                 onBlur={saveProjectState}
                 disabled={isRunning}
               />
-              <p className="field-hint">{t('What you openly ask for.', '겉으로 요구하는 것.')}</p>
             </div>
 
             <div className="config-field">
@@ -798,7 +717,6 @@ Append it only after the actual message, never in reasoning.`
                 onBlur={saveProjectState}
                 disabled={isRunning}
               />
-              <p className="field-hint">{t('Why you want it. Your agent keeps it in mind but need not say it.', '그것을 원하는 진짜 이유. 에이전트가 알고 있지만 말할 필요는 없습니다.')}</p>
             </div>
 
             <div className="config-field">
@@ -810,7 +728,6 @@ Append it only after the actual message, never in reasoning.`
                 onBlur={saveProjectState}
                 disabled={isRunning}
               />
-              <p className="field-hint">{t('What your agent may reveal, when, and what it must keep hidden.', '무엇을 언제 밝히고, 무엇을 숨길지.')}</p>
             </div>
 
             <div className="config-field">
@@ -822,7 +739,6 @@ Append it only after the actual message, never in reasoning.`
                 onBlur={saveProjectState}
                 disabled={isRunning}
               />
-              <p className="field-hint">{t('What to watch for in the other side\'s messages, and how to read it.', '상대 발언에서 무엇을 살피고 어떻게 해석할지.')}</p>
             </div>
           </div>
 

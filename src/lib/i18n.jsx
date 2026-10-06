@@ -38,11 +38,11 @@ export const useLang = () => useContext(LangContext)
 // Pick the string for the current language: tr(lang, { en: '...', ko: '...' }).
 export const tr = (lang, strings) => strings[lang] ?? strings.en
 
-// Fixed two-option switch, rendered once in App so it shows on every page.
-export const LangToggle = () => {
+// Two-option switch. Pages place it in their own header (inline).
+export const LangToggle = ({ inline = false }) => {
   const { lang, setLang } = useLang()
   return (
-    <div className="lang-toggle" role="group" aria-label="Language">
+    <div className={`lang-toggle${inline ? ' inline' : ''}`} role="group" aria-label="Language">
       <button
         type="button"
         className={lang === 'en' ? 'active' : ''}
