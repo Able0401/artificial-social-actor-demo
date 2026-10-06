@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
-import OpenAI from 'openai'
-import { Settings, Target, Lightbulb, MessageSquare, Search, BookOpen, ChevronDown } from 'lucide-react'
-import { SettingsPanel } from '../components/SettingsPanel'
-import { getApiKey, getModel, hasApiKey, XAI_BASE_URL } from '../lib/settings'
+import { Target, Lightbulb, MessageSquare, Search, BookOpen, ChevronDown } from 'lucide-react'
+import { TURN_ENDPOINT } from '../lib/settings'
 import { useLang, tr } from '../lib/i18n'
 
 // The model appends this marker to its last message when the talk is over.
@@ -43,9 +41,6 @@ const SimulationPage = () => {
   const cancelledRef = useRef(false)
   const MAX_TURNS = 10
 
-  // Bring-your-own-key: the xAI key lives in localStorage (asa.apiKey).
-  const [settingsOpen, setSettingsOpen] = useState(false)
-  const [apiKeyReady, setApiKeyReady] = useState(hasApiKey())
 
   useEffect(() => {
     console.log('🔄 SimulationPage useEffect 시작', { projectId, currentUser })
@@ -126,15 +121,6 @@ const SimulationPage = () => {
     console.log('🚀 단일 턴 생성 시작:', currentRole)
     console.log('📝 현재 대화 히스토리:', conversationHistory.length, '개 메시지')
     
-    const apiKey = getApiKey()
-    console.log('🔑 API 키 확인:', apiKey ? '✅ 존재' : '❌ 없음')
-    
-    if (!apiKey) {
-      console.error('❌ API 키가 설정되지 않았습니다.')
-      setApiKeyReady(false)
-      throw new Error(t('No xAI API key set. Add it with the "API Key" button at the top right.', 'xAI API 키가 설정되지 않았습니다. 오른쪽 위 "API Key" 버튼에서 입력해주세요.'))
-    }
-
     const isKo = lang === 'ko'
     let systemPrompt
     let userPrompt
@@ -229,14 +215,6 @@ If you judge that the conversation has naturally come to an end, append exactly 
 Append it only after the actual message, never in reasoning.`
     }
 
-    console.log('🔧 OpenAI 클라이언트 생성')
-    // The key is sent only to XAI_BASE_URL (https://api.x.ai/v1).
-    const client = new OpenAI({
-      baseURL: XAI_BASE_URL,
-      apiKey: apiKey,
-      dangerouslyAllowBrowser: true
-    })
-
     try {
       // 기존 요청 중단을 위한 AbortController 준비
       if (abortControllerRef.current) {
@@ -248,42 +226,23 @@ Append it only after the actual message, never in reasoning.`
       abortControllerRef.current = new AbortController()
       const signal = abortControllerRef.current.signal
       console.log('📞 Grok API 호출 시작 -', currentRole)
-      
-      const completion = await client.chat.completions.create({
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
-        ],
-        // Defaults to 'grok-4-0709' (the model used in the study); the
-        // visitor can override it in the settings panel.
-        model: getModel(),
-        temperature: 0.7,
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "single_turn_response",
-            schema: {
-              type: "object",
-              properties: {
-                message: {
-                  type: "string",
-                  description: isKo ? "실제 발언 내용" : "What the agent actually says, in English"
-                },
-                reasoning: {
-                  type: "string", 
-                  description: isKo ? "발언의 기저에 깔린 생각" : "The thinking behind the message, in English"
-                }
-              },
-              required: ["message", "reasoning"],
-              additionalProperties: false
-            }
-          }
-        },
+
+      // The demo's proxy adds the xAI key, the study model (grok-4-0709) and the response schema.
+      const response = await fetch(TURN_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ system: systemPrompt, user: userPrompt, lang }),
         signal
       })
+      if (response.status === 429) {
+        throw new Error(t('The demo has reached its daily limit. Please try again tomorrow.', '오늘 데모 사용량이 다 찼습니다. 내일 다시 시도해주세요.'))
+      }
+      if (!response.ok) {
+        throw new Error(t('The model did not respond. Please try again.', '모델이 응답하지 않았습니다. 다시 시도해주세요.'))
+      }
 
       console.log('✅ API 응답 수신')
-      const responseText = completion.choices[0].message.content
+      const { content: responseText } = await response.json()
       console.log('📄 응답 내용 길이:', responseText?.length || 0)
 
       const parsedResponse = JSON.parse(responseText)
@@ -468,12 +427,6 @@ Append it only after the actual message, never in reasoning.`
   const handleRun = async () => {
     console.log('▶️ 대화 생성 버튼 클릭')
 
-    if (!hasApiKey()) {
-      console.log('❌ API 키 없음 - 설정 패널 열기')
-      setApiKeyReady(false)
-      setSettingsOpen(true)
-      return
-    }
     console.log('📋 입력 필드 검증:', {
       situation: situation?.trim().length || 0,
       myPosition: myPosition?.trim().length || 0,
@@ -567,15 +520,6 @@ Append it only after the actual message, never in reasoning.`
       <div className="simulation-header">
         <h1>{project?.name}</h1>
         <div className="simulation-header-actions">
-        <button
-          type="button"
-          className={`settings-button ${apiKeyReady ? '' : 'settings-button-missing'}`}
-          onClick={() => setSettingsOpen(true)}
-          title={apiKeyReady ? 'API key set' : 'API key not set'}
-        >
-          <Settings size={18} />
-          <span>API Key{apiKeyReady ? '' : t(' needed', ' 필요 / needed')}</span>
-        </button>
         <button 
           className="back-button" 
           onClick={() => {
@@ -596,11 +540,6 @@ Append it only after the actual message, never in reasoning.`
         </div>
       </div>
 
-      <SettingsPanel
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        onSaved={() => setApiKeyReady(hasApiKey())}
-      />
       
       <div className="simulation-content">
         {/* 상단 협상 상황 */}
@@ -851,22 +790,6 @@ Append it only after the actual message, never in reasoning.`
               <div ref={conversationEndRef} />
             </div>
 
-            {!apiKeyReady && (
-              <div className="api-key-prompt">
-                <span>
-                  {lang === 'ko' && (
-                    <>
-                      xAI API 키가 없습니다. 키를 입력해야 대화를 생성할 수 있습니다.
-                      <br />
-                    </>
-                  )}
-                  No xAI API key set. Add your own key to run a negotiation (it stays in this browser).
-                </span>
-                <button type="button" onClick={() => setSettingsOpen(true)}>
-                  {t('Add key', 'API Key 입력 / Add key')}
-                </button>
-              </div>
-            )}
 
             {/* 프로그레스바 영역 - conversation-messages 바로 아래 */}
             {isLoading && (

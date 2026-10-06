@@ -20,7 +20,7 @@
 - [Research background](#research-background)
 - [Live demo](#live-demo)
 - [How it works](#how-it-works)
-- [Bring your own key](#bring-your-own-key)
+- [Model calls](#model-calls)
 - [Privacy](#privacy)
 - [Run locally](#run-locally)
 - [Deploy your own](#deploy-your-own)
@@ -38,7 +38,7 @@ An Artificial Social Actor (ASA) is an LLM agent that takes part in a social int
 
 This repository is a self-contained public version of the research prototype used in a user study of how people configure such an agent. You set up your agent with four fields, pick an opponent, and watch the two agents negotiate turn by turn. Under each of your agent's messages you can see the reasoning the model produced for that turn, so you can tell whether it did what you meant or only what you wrote.
 
-The research code ran on Supabase with study accounts. This version keeps the same prompts, model and turn structure but stores everything in your browser and uses your own xAI key.
+The research code ran on Supabase with study accounts. This version keeps the same prompts, model and turn structure but stores projects and dialogues in your browser. Model calls go through a small proxy that holds the demo's xAI key, so visitors need no key.
 
 ## Research background
 
@@ -63,7 +63,7 @@ In the study, 12 participants first wrote down negotiations they would like to h
 
 **Try it:** <https://able0401.github.io/artificial-social-actor-demo/>
 
-You need an xAI API key to generate dialogue (see [Bring your own key](#bring-your-own-key)). Without a key you can still create projects and fill in every field.
+No sign-up or API key is needed. The demo allows a fixed number of model calls per visitor per day; one negotiation is 20 calls.
 
 ## How it works
 
@@ -79,24 +79,20 @@ You need an xAI API key to generate dialogue (see [Bring your own key](#bring-yo
 
 | Setting | Value (same as the study) |
 |---|---|
-| Model | `grok-4-0709` (changeable in the key panel) |
+| Model | `grok-4-0709` |
 | Temperature | 0.7 |
 | Output | JSON with `message` and `reasoning` per turn |
 | Turn limit | 20 (10 per agent), or earlier when an agent ends the talk |
 
-## Bring your own key
+## Model calls
 
-The demo calls the xAI API directly from your browser and ships without any key.
+The page sends each turn's prompts to a Firebase function (`functions/index.js`). The function adds the xAI key, the study model (`grok-4-0709`) and the response schema, and returns the model's JSON. It accepts requests only from this page's origin and counts calls per IP per UTC day (`ASA_PER_IP`, default 200) and overall (`ASA_PER_DAY`, default 1000). The key is set in `functions/.env` at deploy time and is not in git or in the page bundle.
 
-1. Create a key at <https://console.x.ai>.
-2. In the app, click the **API Key** button (top right on the projects page and the simulation page).
-3. Paste the key and save. You can also enter a different xAI model id; the default is `grok-4-0709`, the model used in the study.
-
-The key is stored in your browser's `localStorage` under `asa.apiKey` and is sent only to `https://api.x.ai/v1`. Usage is billed to your xAI account. **Clear key** in the same panel removes it.
+To deploy your own proxy, put `XAI_API_KEY=...` in `functions/.env`, run `firebase deploy --only functions:asa --project <your-project>`, and point `TURN_ENDPOINT` in `src/lib/settings.js` at the function URL.
 
 ## Privacy
 
-Everything stays in your browser. Nicknames, projects, dialogues and the API key live in `localStorage`. There is no backend, no database and no analytics, and the only network traffic is your own requests to the xAI API. Clearing site data for the page removes everything.
+Nicknames, projects and dialogues live in your browser's `localStorage`. The proxy forwards each turn to the xAI API and keeps only a per-IP call count (a hashed IP, reset daily). There is no analytics. Clearing site data for the page removes everything stored in the browser.
 
 ## Run locally
 
@@ -109,7 +105,7 @@ npm install
 npm run dev
 ```
 
-Open the URL Vite prints (usually http://localhost:5173) and add your key in the app.
+Open the URL Vite prints (usually http://localhost:5173). `localhost:5173` and `localhost:4173` are allowed by the proxy.
 
 ## Deploy your own
 
@@ -130,11 +126,10 @@ npx gh-pages -d dist --dotfiles
 
 ```
 src/
-  components/SettingsPanel.jsx  BYOK settings modal and gear button
   contexts/AppContext.jsx       nickname and project state (localStorage)
   lib/db.js                     localStorage replacement for the study database
   lib/i18n.jsx                  EN/KO switch and string helper
-  lib/settings.js               API key and model storage helpers
+  lib/settings.js               proxy endpoint
   pages/LoginPage.jsx           nickname entry
   pages/ProjectsPage.jsx        project list
   pages/SimulationPage.jsx      negotiation interface, prompts and model calls
@@ -175,6 +170,6 @@ ASA(Artificial Social Actor)는 협상을 AI 에이전트에게 맡기는 연구
 - 실행: `npm install` 후 `npm run dev`.
 - 언어: 오른쪽 아래 EN / KO 스위치로 화면과 모델 프롬프트 언어를 함께 바꿉니다. 기본값은 영어이고, KO는 연구 때 쓴 한국어 프롬프트 그대로입니다.
 - 로그인: 비밀번호 없는 닉네임입니다. 이 브라우저 안에서 프로젝트를 구분하는 데만 쓰입니다.
-- API 키: <https://console.x.ai>에서 발급받아 앱 오른쪽 위 **API Key** 버튼에 붙여 넣습니다. 키는 이 브라우저의 localStorage(`asa.apiKey`)에만 저장되고 `https://api.x.ai/v1`로만 전송됩니다.
+- API 키: 필요 없습니다. 모델 호출은 데모용 xAI 키를 가진 Firebase 함수(`functions/index.js`)를 거칩니다. 방문자마다 하루 호출 수가 정해져 있고, 협상 한 번은 20회입니다.
 - 모델, 온도, JSON 출력 형식은 연구 때와 같습니다 (`grok-4-0709`, 0.7).
-- 닉네임, 프로젝트, 대화, 키는 모두 브라우저에만 저장되며 서버는 없습니다.
+- 닉네임, 프로젝트, 대화는 브라우저에만 저장됩니다. 프록시는 대화를 저장하지 않습니다.

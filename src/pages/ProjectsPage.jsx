@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Plus, Folder, Trash2, LogOut, Clock } from 'lucide-react'
-import { SettingsButton } from '../components/SettingsPanel'
 import { useLang, tr } from '../lib/i18n'
 
 const ProjectsPage = () => {
@@ -58,7 +57,6 @@ const ProjectsPage = () => {
           </div>
           <div className="header-user">
             <span>{lang === 'ko' ? `환영합니다, ${currentUser}님` : `Welcome, ${currentUser}`}</span>
-            <SettingsButton />
             <button onClick={handleLogout} className="logout-button">
               <LogOut size={20} />
               {t('Log out', '로그아웃 / Log out')}
