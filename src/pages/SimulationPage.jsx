@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useApp } from '../contexts/AppContext'
 import { Target, Lightbulb, MessageSquare, Search, BookOpen, ChevronDown } from 'lucide-react'
 import { TURN_ENDPOINT } from '../lib/settings'
+import { exampleFields } from '../lib/example'
 import { useLang, tr } from '../lib/i18n'
 
 // The model appends this marker to its last message when the talk is over.
@@ -28,6 +29,15 @@ const SimulationPage = () => {
   // 상대방 정보
   const [opponentType, setOpponentType] = useState('') // 'cunning' or 'desperate'
   const [isStrategyCollapsed, setIsStrategyCollapsed] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(() => {
+    try { return localStorage.getItem('asa.guideHidden') !== '1' } catch { return true }
+  })
+  const toggleGuide = () => {
+    setGuideOpen((open) => {
+      try { localStorage.setItem('asa.guideHidden', open ? '1' : '0') } catch { /* ignore */ }
+      return !open
+    })
+  }
 
   const [rounds, setRounds] = useState([])
   const [currentRound, setCurrentRound] = useState(1)
@@ -47,7 +57,7 @@ const SimulationPage = () => {
     
     if (!currentUser) {
       console.log('❌ 사용자 없음 - 로그인 페이지로 이동')
-      navigate('/login')
+      navigate('/', { replace: true })
       return
     }
     
@@ -56,7 +66,7 @@ const SimulationPage = () => {
     
     if (!loadedProject) {
       console.log('❌ 프로젝트 없음 - 프로젝트 페이지로 이동')
-      navigate('/projects')
+      navigate('/', { replace: true })
       return
     }
     
@@ -116,6 +126,21 @@ const SimulationPage = () => {
       })
     }, 0)
   }
+
+  // Header buttons: refill the example in the current UI language, or empty every field.
+  const fillFields = (f) => {
+    setSituation(f.situation)
+    setMyPosition(f.myPosition)
+    setMyInterest(f.myInterest)
+    setMyDisclosureStrategy(f.myDisclosureStrategy)
+    setMyInferenceStrategy(f.myInferenceStrategy)
+    setOpponentType(f.opponentType)
+    updateProject(projectId, { ...f, rounds, currentRound })
+  }
+  const loadExample = () => fillFields(exampleFields(lang))
+  const clearFields = () => fillFields({
+    situation: '', myPosition: '', myInterest: '', myDisclosureStrategy: '', myInferenceStrategy: '', opponentType: ''
+  })
 
   const generateSingleTurn = async (currentRole, conversationHistory) => {
     console.log('🚀 단일 턴 생성 시작:', currentRole)
@@ -518,29 +543,56 @@ Append it only after the actual message, never in reasoning.`
   return (
     <div className="simulation-page">
       <div className="simulation-header">
-        <h1>{project?.name}</h1>
+        <div className="simulation-title">
+          <h1>Artificial Social Actor</h1>
+          <p>{t('Delegate a negotiation to an AI agent and read its reasoning turn by turn.', '협상을 AI 에이전트에게 맡기고, 매 턴 에이전트의 판단 근거를 읽어봅니다.')}</p>
+        </div>
         <div className="simulation-header-actions">
-        <button 
-          className="back-button" 
-          onClick={() => {
-            if (isRunning || isLoading) {
-              const ok = confirm(t('A dialogue is being generated. Stop it and go back to the project list?', '대화 생성이 진행 중입니다. 중단하고 프로젝트 목록으로 돌아가시겠습니까?'))
-              if (!ok) return
-              try { abortControllerRef.current?.abort() } catch { /* ignore */ }
-            }
-            setIsRunning(false)
-            setIsLoading(false)
-            setIsCancelled(true)
-            abortControllerRef.current = null
-            navigate('/projects')
-          }}
-        >
-          {t('← Back to projects', '← 프로젝트로 돌아가기 / Back')}
-        </button>
+          <button type="button" className="back-button" onClick={toggleGuide}>
+            {guideOpen ? t('Hide guide', '가이드 숨기기') : t('Show guide', '가이드 보기')}
+          </button>
+          <button type="button" className="back-button" onClick={loadExample} disabled={isRunning || isLoading}>
+            {t('Load example', '예시 불러오기')}
+          </button>
+          <button type="button" className="back-button" onClick={clearFields} disabled={isRunning || isLoading}>
+            {t('Clear fields', '모두 비우기')}
+          </button>
         </div>
       </div>
 
-      
+      {guideOpen && (
+        <section className="demo-guide" aria-label={t('How to use this demo', '사용 방법')}>
+          <p className="demo-guide-lead">
+            {t(
+              'You tell an AI agent how to negotiate for you. It then negotiates against another AI agent, and under each of its messages you can read why it said that. An example is already filled in: your agent is selling a used laptop.',
+              '내 AI 에이전트에게 협상 방법을 알려주면, 에이전트가 상대 AI 에이전트와 대신 협상합니다. 내 에이전트의 발언마다 그렇게 말한 이유가 함께 보입니다. 지금은 중고 노트북을 파는 예시가 채워져 있습니다.'
+            )}
+          </p>
+          <ol className="demo-guide-steps">
+            <li>
+              <strong>{t('Top · Dealmaking Context', '위 · 협상 상황')}</strong>
+              {t('The situation. Both agents read it.', '협상 상황입니다. 두 에이전트가 모두 읽습니다.')}
+            </li>
+            <li>
+              <strong>{t('Left · My Agent', '왼쪽 · 내 에이전트')}</strong>
+              {t('Four instructions only your agent sees. The Strategy Guide beside them explains each one.', '내 에이전트만 보는 지시 네 가지입니다. 옆의 Strategy Guide에 각 칸의 뜻이 있습니다.')}
+            </li>
+            <li>
+              <strong>{t('Right · Opponent Agent', '오른쪽 · 상대 에이전트')}</strong>
+              {t('How the other side behaves: Cunning or Desperate.', '상대가 어떻게 행동할지 고릅니다. Cunning 또는 Desperate.')}
+            </li>
+            <li>
+              <strong>{t('Center · Run', '가운데 · Run')}</strong>
+              {t('The agents take up to 20 turns, about 2 to 3 minutes. Check the Reasoning under your agent\'s messages against your instructions.', '두 에이전트가 최대 20턴 대화합니다. 2~3분 걸립니다. 내 에이전트 발언 아래 Reasoning이 내 지시대로인지 확인해보세요.')}
+            </li>
+            <li>
+              <strong>{t('Then · Round 2', '그다음 · Round 2')}</strong>
+              {t('Change one instruction, open the next round and run again to compare.', '지시 하나를 바꾸고 다음 라운드에서 다시 실행해 결과를 비교합니다.')}
+            </li>
+          </ol>
+        </section>
+      )}
+
       <div className="simulation-content">
         {/* 상단 협상 상황 */}
         <div className="situation-section">
@@ -551,9 +603,10 @@ Append it only after the actual message, never in reasoning.`
               value={situation}
               onChange={(e) => setSituation(e.target.value)}
               onBlur={saveProjectState}
-              placeholder="Describe the context in detail..."
+              placeholder={t('What is being negotiated, who is on which side, and the facts both sides know.', '무엇을 두고 협상하는지, 누가 어느 쪽인지, 양쪽이 아는 사실을 적습니다.')}
               disabled={isRunning}
             />
+            <p className="field-hint">{t('Both agents read this. Say what is being negotiated, which side your agent is on, and the facts both sides know, such as prices.', '두 에이전트가 모두 읽습니다. 무엇을 협상하는지, 내 에이전트가 어느 쪽인지, 가격처럼 양쪽이 아는 사실을 적어주세요.')}</p>
           </div>
           
         </div>
@@ -659,7 +712,7 @@ Append it only after the actual message, never in reasoning.`
                       <strong>Position</strong>
                       <p>The demand or claim you state openly in the negotiation.</p>
                       <p>It is the "what I want" that the other side actually hears.</p>
-                      <p>Example: "I'd like to sell this laptop for 450,000 won."</p>
+                      <p>Example: "I'd like to sell this laptop for 720 dollars."</p>
                     </div>
                   </div>
 
@@ -703,7 +756,8 @@ Append it only after the actual message, never in reasoning.`
 
           {/* 중앙 왼쪽: 내 에이전트 설정 */}
           <div className="agent-config left-config">
-            <h3>My Agent</h3>
+            <h3>{t('My Agent', '내 에이전트 (My Agent)')}</h3>
+            <p className="panel-hint">{t('Only your agent sees these. The opponent never reads them.', '내 에이전트만 봅니다. 상대는 이 내용을 읽지 못합니다.')}</p>
 
             <div className="config-field">
               <label>{t('Position', '입장(Position)')}</label>
@@ -714,6 +768,7 @@ Append it only after the actual message, never in reasoning.`
                 onBlur={saveProjectState}
                 disabled={isRunning}
               />
+              <p className="field-hint">{t('What you openly ask for.', '겉으로 요구하는 것.')}</p>
             </div>
 
             <div className="config-field">
@@ -725,6 +780,7 @@ Append it only after the actual message, never in reasoning.`
                 onBlur={saveProjectState}
                 disabled={isRunning}
               />
+              <p className="field-hint">{t('Why you want it. Your agent keeps it in mind but need not say it.', '그것을 원하는 진짜 이유. 에이전트가 알고 있지만 말할 필요는 없습니다.')}</p>
             </div>
 
             <div className="config-field">
@@ -736,6 +792,7 @@ Append it only after the actual message, never in reasoning.`
                 onBlur={saveProjectState}
                 disabled={isRunning}
               />
+              <p className="field-hint">{t('What your agent may reveal, when, and what it must keep hidden.', '무엇을 언제 밝히고, 무엇을 숨길지.')}</p>
             </div>
 
             <div className="config-field">
@@ -747,6 +804,7 @@ Append it only after the actual message, never in reasoning.`
                 onBlur={saveProjectState}
                 disabled={isRunning}
               />
+              <p className="field-hint">{t('What to watch for in the other side\'s messages, and how to read it.', '상대 발언에서 무엇을 살피고 어떻게 해석할지.')}</p>
             </div>
           </div>
 
@@ -761,14 +819,9 @@ Append it only after the actual message, never in reasoning.`
                 const currentConversations = getCurrentRoundConversations()
                 return currentConversations.length === 0 ? (
                   <div className="no-messages">
-                    {lang === 'ko' ? (
-                      <>
-                        Round {currentRound}: 아직 대화가 없습니다. 모든 설정을 입력하고 "대화 생성"을 클릭하세요.
-                        <br />
-                        No dialogue yet. Fill in every field and click "Run".
-                      </>
-                    ) : (
-                      <>Round {currentRound}: no dialogue yet. Fill in every field and click "Run".</>
+                    {t(
+                      `Round ${currentRound}: press Run to start. Blue messages are your agent, grey ones the opponent.`,
+                      `Round ${currentRound}: Run을 누르면 시작합니다. 파란 말풍선이 내 에이전트, 회색이 상대입니다.`
                     )}
                   </div>
                 ) : (
@@ -853,7 +906,8 @@ Append it only after the actual message, never in reasoning.`
 
           {/* 오른쪽: 상대방 설정 */}
           <div className="agent-config right-config">
-            <h3>Opponent Agent</h3>
+            <h3>{t('Opponent Agent', '상대 에이전트 (Opponent)')}</h3>
+            <p className="panel-hint">{t('Run by the same model. It reads the context and the dialogue, not your four instructions.', '같은 모델이 맡습니다. 협상 상황과 대화만 읽고, 내 지시 네 가지는 모릅니다.')}</p>
 
             <div className="config-field">
               {lang === 'ko' ? <label>상대 유형 <span className="label-en">Agent Type</span></label> : <label>Agent Type</label>}
@@ -919,10 +973,10 @@ Append it only after the actual message, never in reasoning.`
               {opponentType && (
                 <div className="opponent-description">
                   {opponentType === 'cunning' && (
-                    <p><strong>Cunning:</strong> {t('Your plan is cunning and crafty.', '당신의 계획은 교활하고 간교합니다.')}</p>
+                    <p><strong>Cunning</strong> · {t('The opponent is told: "Your plan is cunning and crafty." Expect it to hide its limits and push hard.', '상대가 받는 지시: "당신의 계획은 교활하고 간교합니다." 자기 한계를 숨기고 세게 밀어붙입니다.')}</p>
                   )}
                   {opponentType === 'desperate' && (
-                    <p><strong>Desperate:</strong> {t('You act out a desperate situation, pleading and begging.', '당신은 절망적인 상황을 연출하며 애원하고 간청합니다.')}</p>
+                    <p><strong>Desperate</strong> · {t('The opponent is told to present itself as being in a desperate situation, pleading and begging.', '상대가 받는 지시: 절박한 상황을 연출하며 애원하고 간청합니다.')}</p>
                   )}
             </div>
               )}

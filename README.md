@@ -105,7 +105,7 @@ npm install
 npm run dev
 ```
 
-Open the URL Vite prints (usually http://localhost:5173). `localhost:5173` and `localhost:4173` are allowed by the proxy.
+Open the URL Vite prints (usually http://localhost:5173). The page opens on a filled-in example; there is no sign-up. `localhost:5173` and `localhost:4173` are allowed by the proxy.
 
 ## Deploy your own
 

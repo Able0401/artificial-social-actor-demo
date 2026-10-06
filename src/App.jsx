@@ -4,6 +4,7 @@ import { LangProvider, LangToggle } from './lib/i18n'
 import LoginPage from './pages/LoginPage'
 import ProjectsPage from './pages/ProjectsPage'
 import SimulationPage from './pages/SimulationPage'
+import StartPage from './pages/StartPage'
 import './App.css'
 
 // BASE_URL comes from vite.config.js (VITE_BASE_PATH), so the router
@@ -16,11 +17,11 @@ function App() {
       <AppProvider>
         <Router basename={basename}>
           <Routes>
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<StartPage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/simulation/:projectId" element={<SimulationPage />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Router>
         <LangToggle />
